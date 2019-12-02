@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+        "Day01",
+        "Day02",
+]
