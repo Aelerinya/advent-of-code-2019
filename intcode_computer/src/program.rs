@@ -67,13 +67,13 @@ impl fmt::Display for OutOfBoundError {
 
 impl Program {
     pub fn read(&self, pos: usize) -> Result<isize, OutOfBoundError> {
-        match self.memory.get(pos) {
-            Some(v) => Ok(*v),
-            None => Err(OutOfBoundError(pos)),
-        }
+        Ok(*self.memory.get(pos).unwrap_or(&0))
     }
 
     pub fn write(&mut self, pos: usize, value: isize) -> Result<(), OutOfBoundError> {
+        if pos >= self.memory.len() {
+            self.memory.resize(pos + 1, 0);
+        }
         match self.memory.get_mut(pos) {
             Some(v) => {
                 *v = value;

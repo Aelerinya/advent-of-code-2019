@@ -12,6 +12,7 @@ pub enum InstructionResult {
     Continue,
     JumpTo(usize),
     Quit,
+    UpdateRelativeOffset(isize),
 }
 
 impl fmt::Debug for Instruction {

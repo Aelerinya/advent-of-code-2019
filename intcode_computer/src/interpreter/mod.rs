@@ -12,6 +12,7 @@ pub struct Interpreter {
     program: Rc<RefCell<Program>>,
     instruction_pointer: usize,
     instructions: HashMap<u8, Instruction>,
+    relative_offset: isize,
 }
 
 #[derive(Debug)]
@@ -64,6 +65,7 @@ impl Interpreter {
             program: Rc::new(RefCell::new(program)),
             instruction_pointer: 0,
             instructions: HashMap::new(),
+            relative_offset: 0,
         }
     }
 
@@ -87,10 +89,12 @@ impl Interpreter {
         let program = self.program.clone();
         let instruction_pointer = self.instruction_pointer;
         if let Some(instruction) = self.instructions.get_mut(&opcode) {
+            //dbg!(&instruction);
             let mut access_modes = number_to_digits(access_modes);
             access_modes.reverse();
             let access_modes = access_modes.iter().cloned().chain(std::iter::repeat(0));
             let parameters_number = instruction.arguments_number();
+            let relative_offset = self.relative_offset;
             let parameters = (0..parameters_number)
                 .zip(access_modes)
                 .map(|(param, mode)| {
@@ -100,6 +104,7 @@ impl Interpreter {
                             .borrow()
                             .read(instruction_pointer + param as usize + 1)?,
                         program.clone(),
+                        relative_offset,
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -107,8 +112,12 @@ impl Interpreter {
                 InstructionResult::Quit => return Ok(InterpreterState::End),
                 InstructionResult::Continue => {
                     self.instruction_pointer += 1 + instruction.arguments_number() as usize;
-                },
-                InstructionResult::JumpTo(pos) => self.instruction_pointer = pos
+                }
+                InstructionResult::JumpTo(pos) => self.instruction_pointer = pos,
+                InstructionResult::UpdateRelativeOffset(off) => {
+                    self.instruction_pointer += 1 + instruction.arguments_number() as usize;
+                    self.relative_offset += off;
+                }
             };
             if self.instruction_pointer >= self.program.borrow().len() {
                 Err(InterpreterError::UnexpectedEndOfFile)
@@ -121,7 +130,11 @@ impl Interpreter {
     }
 
     pub fn execute(&mut self) -> Result<(), InterpreterError> {
-        while self.execute_one()? != InterpreterState::End {}
+        while self.execute_one()? != InterpreterState::End {
+            // dbg!(&self);
+            // let mut line = String::new();
+            // std::io::stdin().read_line(&mut line).unwrap();
+        }
         Ok(())
     }
 }
