@@ -137,4 +137,90 @@ impl Interpreter {
         }
         Ok(())
     }
+
+    pub fn complete<F, G>(program: Program, mut input_fn: F, mut output_fn: G) -> Interpreter
+    where
+        F: FnMut() -> isize + 'static,
+        G: FnMut(isize) + 'static,
+    {
+        let mut interpreter = Interpreter::new(program);
+
+        // Instruction: add
+        interpreter.add_instruction(Instruction::new(1, 3, |mut params| {
+            let sum = params[0].read()? + params[1].read()?;
+            params[2].write(sum)?;
+            Ok(InstructionResult::Continue)
+        }).unwrap());
+
+        // Instruction: mulitply
+        interpreter.add_instruction(Instruction::new(2, 3, |mut params| {
+            let product = params[0].read()? * params[1].read()?;
+            params[2].write(product)?;
+            Ok(InstructionResult::Continue)
+        }).unwrap());
+
+        // Instruction: input
+        interpreter.add_instruction(Instruction::new(3, 1, move |mut params| {
+            let input = input_fn();
+            params[0].write(input)?;
+            Ok(InstructionResult::Continue)
+        }).unwrap());
+
+        // Interpreter: output
+        interpreter.add_instruction(Instruction::new(4, 1, move |params| {
+            let output = params[0].read()?;
+            output_fn(output);
+            Ok(InstructionResult::Continue)
+        }).unwrap());
+
+        // Interpreter: quit
+        interpreter.add_instruction(Instruction::new(99, 0, |_| Ok(InstructionResult::Quit)).unwrap() );
+
+        // Interpreter: jump-if-true
+        interpreter.add_instruction(Instruction::new(5, 2, |params| {
+            if params[0].read()? != 0 {
+                Ok(InstructionResult::JumpTo(params[1].read()? as usize))
+            } else {
+                Ok(InstructionResult::Continue)
+            }
+        }).unwrap());
+        // Interpreter: jump-if-false
+        interpreter.add_instruction(Instruction::new(6, 2, |params| {
+            if params[0].read()? == 0 {
+                Ok(InstructionResult::JumpTo(params[1].read()? as usize))
+            } else {
+                Ok(InstructionResult::Continue)
+            }
+        }).unwrap());
+
+        // Instruction: less than
+        interpreter.add_instruction(Instruction::new(7, 3, |mut params| {
+            let result = if params[0].read()? < params[1].read()? {
+                1
+            } else {
+                0
+            };
+            params[2].write(result)?;
+            Ok(InstructionResult::Continue)
+        }).unwrap());
+
+        // Instruction: equals
+        interpreter.add_instruction(Instruction::new(8, 3, |mut params| {
+            let result = if params[0].read()? == params[1].read()? {
+                1
+            } else {
+                0
+            };
+            params[2].write(result)?;
+            Ok(InstructionResult::Continue)
+        }).unwrap());
+
+        // Instruction: adjust the relative base
+        interpreter.add_instruction(Instruction::new(9, 1, |params| {
+            let new_offset = params[0].read()?;
+            Ok(InstructionResult::UpdateRelativeOffset(new_offset))
+        }).unwrap());
+
+        interpreter
+    }
 }
