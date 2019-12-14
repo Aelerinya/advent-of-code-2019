@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt;
+use std::io::Read;
 use std::num::ParseIntError;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
@@ -85,5 +86,11 @@ impl Program {
 
     pub fn len(&self) -> usize {
         self.memory.len()
+    }
+
+    pub fn from_stdin() -> Result<Program, Box<dyn std::error::Error>> {
+        let mut s = String::new();
+        std::io::stdin().read_to_string(&mut s)?;
+        Ok(s.parse::<Program>()?)
     }
 }
